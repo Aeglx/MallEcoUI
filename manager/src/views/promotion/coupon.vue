@@ -117,14 +117,134 @@
         />
       </div>
     </el-card>
+
+    <!-- 添加/编辑对话框 -->
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="700px">
+      <el-form ref="formRef" :model="formData" :rules="formRules" label-width="120px">
+        <el-form-item label="活动名称" prop="promotionName">
+          <el-input v-model="formData.promotionName" placeholder="请输入活动名称" style="width: 400px" />
+        </el-form-item>
+        <el-form-item label="优惠券名称" prop="couponName">
+          <el-input v-model="formData.couponName" placeholder="请输入优惠券名称" style="width: 400px" />
+        </el-form-item>
+        <el-form-item label="优惠券类型" prop="couponType">
+          <el-radio-group v-model="formData.couponType">
+            <el-radio label="DISCOUNT">打折</el-radio>
+            <el-radio label="PRICE">减免现金</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item v-if="formData.couponType === 'DISCOUNT'" label="折扣" prop="couponDiscount">
+          <el-input-number
+            v-model="formData.couponDiscount"
+            :min="0.1"
+            :max="9.9"
+            :precision="1"
+            :step="0.1"
+            style="width: 200px"
+          />
+          <span style="margin-left: 10px; color: #999">请输入0.1-9.9的数字，可有一位小数</span>
+        </el-form-item>
+        <el-form-item v-if="formData.couponType === 'PRICE'" label="面额" prop="price">
+          <el-input-number
+            v-model="formData.price"
+            :min="0.01"
+            :precision="2"
+            :step="10"
+            style="width: 200px"
+          />
+          <span style="margin-left: 10px; color: #999">元</span>
+        </el-form-item>
+        <el-form-item label="获取方式" prop="getType">
+          <el-radio-group v-model="formData.getType">
+            <el-radio label="FREE">免费获取</el-radio>
+            <el-radio label="ACTIVITY">活动获取</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="发行数量" prop="publishNum">
+          <el-input-number
+            v-model="formData.publishNum"
+            :min="0"
+            :step="100"
+            style="width: 200px"
+          />
+          <span style="margin-left: 10px; color: #999">0表示不限制</span>
+        </el-form-item>
+        <el-form-item label="限领数量" prop="couponLimitNum">
+          <el-input-number
+            v-model="formData.couponLimitNum"
+            :min="1"
+            style="width: 200px"
+          />
+        </el-form-item>
+        <el-form-item label="活动时间">
+          <el-date-picker
+            v-model="formData.dateRange"
+            type="datetimerange"
+            range-separator="至"
+            start-placeholder="开始时间"
+            end-placeholder="结束时间"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            style="width: 400px"
+          />
+        </el-form-item>
+        <el-form-item label="有效期类型" prop="rangeDayType">
+          <el-radio-group v-model="formData.rangeDayType">
+            <el-radio label="FIXED">固定天数</el-radio>
+            <el-radio label="PERIOD">时间段</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item v-if="formData.rangeDayType === 'FIXED'" label="有效天数" prop="effectiveDays">
+          <el-input-number v-model="formData.effectiveDays" :min="1" style="width: 200px" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleSubmit">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 查看详情对话框 -->
+    <el-dialog v-model="viewDialogVisible" title="优惠券详情" width="700px">
+      <el-descriptions :column="2" border>
+        <el-descriptions-item label="优惠券名称">{{ detailData.couponName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="活动名称">{{ detailData.promotionName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="优惠券类型">
+          <el-tag v-if="detailData.couponType === 'DISCOUNT'" type="primary">打折</el-tag>
+          <el-tag v-else type="success">减免现金</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="面额/折扣">
+          <span v-if="detailData.price">¥{{ detailData.price }}</span>
+          <span v-else>{{ detailData.couponDiscount }}折</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="获取方式">
+          <el-tag v-if="detailData.getType === 'FREE'" type="danger">免费获取</el-tag>
+          <el-tag v-else type="warning">活动获取</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="发行数量">
+          {{ detailData.publishNum === 0 ? '不限制' : detailData.publishNum }}
+        </el-descriptions-item>
+        <el-descriptions-item label="已领取">{{ detailData.receivedNum || 0 }}</el-descriptions-item>
+        <el-descriptions-item label="已使用">{{ detailData.usedNum || 0 }}</el-descriptions-item>
+        <el-descriptions-item label="状态">
+          <el-tag v-if="detailData.promotionStatus === 'START'" type="success">已开始</el-tag>
+          <el-tag v-else-if="detailData.promotionStatus === 'NEW'" type="info">未开始</el-tag>
+          <el-tag v-else-if="detailData.promotionStatus === 'END'" type="warning">已结束</el-tag>
+          <el-tag v-else type="danger">已关闭</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="创建时间">{{ detailData.createTime || '-' }}</el-descriptions-item>
+      </el-descriptions>
+      <template #footer>
+        <el-button @click="viewDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus } from '@element-plus/icons-vue'
-import { getCouponList, deleteCoupon } from '@/api/promotion'
+import { getCouponList, getCouponDetail, addCoupon, updateCoupon, deleteCoupon } from '@/api/promotion'
 
 const searchForm = reactive({
   couponName: '',
@@ -189,17 +309,192 @@ const handleCurrentChange = (page: number) => {
   getData()
 }
 
+// 对话框
+const dialogVisible = ref(false)
+const dialogTitle = ref('添加优惠券')
+const formRef = ref()
+const formData = reactive({
+  id: '',
+  promotionName: '',
+  couponName: '',
+  couponType: 'PRICE',
+  couponDiscount: 0,
+  price: 0,
+  getType: 'FREE',
+  publishNum: 0,
+  couponLimitNum: 1,
+  dateRange: [],
+  rangeDayType: 'FIXED',
+  effectiveDays: 1
+})
+
+const formRules = {
+  promotionName: [{ required: true, message: '请输入活动名称', trigger: 'blur' }],
+  couponName: [{ required: true, message: '请输入优惠券名称', trigger: 'blur' }],
+  couponType: [{ required: true, message: '请选择优惠券类型', trigger: 'change' }],
+  couponDiscount: [
+    {
+      validator: (rule: any, value: number, callback: any) => {
+        if (formData.couponType === 'DISCOUNT' && (!value || value < 0.1 || value > 9.9)) {
+          callback(new Error('折扣必须在0.1-9.9之间'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
+  ],
+  price: [
+    {
+      validator: (rule: any, value: number, callback: any) => {
+        if (formData.couponType === 'PRICE' && (!value || value <= 0)) {
+          callback(new Error('面额必须大于0'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
+  ]
+}
+
+// 监听优惠券类型变化，重置相关字段
+watch(
+  () => formData.couponType,
+  () => {
+    if (formData.couponType === 'DISCOUNT') {
+      formData.price = 0
+    } else {
+      formData.couponDiscount = 0
+    }
+    if (formRef.value) {
+      formRef.value.clearValidate(['couponDiscount', 'price'])
+    }
+  }
+)
+
 const handleAdd = () => {
-  console.log('添加优惠券')
+  dialogTitle.value = '添加优惠券'
+  formData.id = ''
+  formData.promotionName = ''
+  formData.couponName = ''
+  formData.couponType = 'PRICE'
+  formData.couponDiscount = 0
+  formData.price = 0
+  formData.getType = 'FREE'
+  formData.publishNum = 0
+  formData.couponLimitNum = 1
+  formData.dateRange = []
+  formData.rangeDayType = 'FIXED'
+  formData.effectiveDays = 1
+  dialogVisible.value = true
 }
 
 const handleView = (row: any) => {
-  console.log('查看优惠券:', row)
+  Object.assign(detailData, {
+    couponName: row.couponName || '',
+    promotionName: row.promotionName || '',
+    couponType: row.couponType || '',
+    price: row.price || 0,
+    couponDiscount: row.couponDiscount || 0,
+    getType: row.getType || '',
+    publishNum: row.publishNum || 0,
+    receivedNum: row.receivedNum || 0,
+    usedNum: row.usedNum || 0,
+    promotionStatus: row.promotionStatus || '',
+    createTime: row.createTime || ''
+  })
+  viewDialogVisible.value = true
 }
 
-const handleEdit = (row: any) => {
-  console.log('编辑优惠券:', row)
+const handleEdit = async (row: any) => {
+  try {
+    const res = await getCouponDetail(row.id.toString())
+    if (res.success && res.result) {
+      dialogTitle.value = '编辑优惠券'
+      formData.id = res.result.id
+      formData.promotionName = res.result.promotionName || ''
+      formData.couponName = res.result.couponName || ''
+      formData.couponType = res.result.couponType || 'PRICE'
+      formData.couponDiscount = res.result.couponDiscount || 0
+      formData.price = res.result.price || 0
+      formData.getType = res.result.getType || 'FREE'
+      formData.publishNum = res.result.publishNum || 0
+      formData.couponLimitNum = res.result.couponLimitNum || 1
+      if (res.result.startTime && res.result.endTime) {
+        formData.dateRange = [res.result.startTime, res.result.endTime]
+      } else {
+        formData.dateRange = []
+      }
+      formData.rangeDayType = res.result.rangeDayType || 'FIXED'
+      formData.effectiveDays = res.result.effectiveDays || 1
+      dialogVisible.value = true
+    }
+  } catch (error) {
+    // 如果获取详情失败，使用行数据
+    dialogTitle.value = '编辑优惠券'
+    formData.id = row.id
+    formData.promotionName = row.promotionName || ''
+    formData.couponName = row.couponName || ''
+    formData.couponType = row.couponType || 'PRICE'
+    formData.couponDiscount = row.couponDiscount || 0
+    formData.price = row.price || 0
+    formData.getType = row.getType || 'FREE'
+    formData.publishNum = row.publishNum || 0
+    formData.couponLimitNum = row.couponLimitNum || 1
+    formData.dateRange = []
+    formData.rangeDayType = row.rangeDayType || 'FIXED'
+    formData.effectiveDays = row.effectiveDays || 1
+    dialogVisible.value = true
+  }
 }
+
+const handleSubmit = async () => {
+  if (!formRef.value) return
+  await formRef.value.validate(async (valid: boolean) => {
+    if (valid) {
+      try {
+        const params: any = { ...formData }
+        if (formData.dateRange && formData.dateRange.length === 2) {
+          params.startTime = formData.dateRange[0]
+          params.endTime = formData.dateRange[1]
+        }
+        delete params.dateRange
+        delete params.id
+
+        let res
+        if (formData.id) {
+          res = await updateCoupon(formData.id.toString(), params)
+        } else {
+          res = await addCoupon(params)
+        }
+        if (res.success) {
+          ElMessage.success(formData.id ? '修改成功' : '添加成功')
+          dialogVisible.value = false
+          getData()
+        }
+      } catch (error: any) {
+        ElMessage.error(error?.message || '操作失败')
+      }
+    }
+  })
+}
+
+// 查看详情对话框
+const viewDialogVisible = ref(false)
+const detailData = reactive({
+  couponName: '',
+  promotionName: '',
+  couponType: '',
+  price: 0,
+  couponDiscount: 0,
+  getType: '',
+  publishNum: 0,
+  receivedNum: 0,
+  usedNum: 0,
+  promotionStatus: '',
+  createTime: ''
+})
 
 const handleDelete = (row: any) => {
   ElMessageBox.confirm('确认删除此优惠券？', '提示', {

@@ -79,6 +79,54 @@
         />
       </div>
     </el-card>
+
+    <!-- 添加/编辑对话框 -->
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px">
+      <el-form ref="formRef" :model="formData" :rules="formRules" label-width="100px">
+        <el-form-item label="用户名" prop="username">
+          <el-input
+            v-model="formData.username"
+            :disabled="!!formData.id"
+            placeholder="请输入用户名"
+            style="width: 400px"
+          />
+        </el-form-item>
+        <el-form-item v-if="!formData.id" label="密码" prop="password">
+          <el-input
+            v-model="formData.password"
+            type="password"
+            placeholder="请输入密码"
+            show-password
+            style="width: 400px"
+          />
+        </el-form-item>
+        <el-form-item label="昵称" prop="nickname">
+          <el-input v-model="formData.nickname" placeholder="请输入昵称" style="width: 400px" />
+        </el-form-item>
+        <el-form-item label="邮箱" prop="email">
+          <el-input v-model="formData.email" placeholder="请输入邮箱" style="width: 400px" />
+        </el-form-item>
+        <el-form-item label="角色" prop="roleIds">
+          <el-select
+            v-model="formData.roleIds"
+            multiple
+            placeholder="请选择角色"
+            style="width: 400px"
+          >
+            <el-option
+              v-for="role in roleList"
+              :key="role.id"
+              :label="role.name"
+              :value="role.id"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleSubmit">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -86,7 +134,16 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus } from '@element-plus/icons-vue'
-import { getUserList, deleteUser } from '@/api/rbac'
+import {
+  getUserList,
+  getUserDetail,
+  addUser,
+  updateUser,
+  deleteUser,
+  assignUserRoles,
+  getUserRoles,
+  getRoleList
+} from '@/api/rbac'
 
 const searchForm = reactive({
   username: '',
