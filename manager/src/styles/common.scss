@@ -1,0 +1,57 @@
+//自动移滚动条样式
+::-webkit-scrollbar {
+  width: 1px;
+  height: 5px;
+}
+::-webkit-scrollbar-thumb {
+  border-radius: 1em;
+  background-color: rgba(50, 50, 50, 0.3);
+}
+::-webkit-scrollbar-track {
+  border-radius: 1em;
+  background-color: rgba(50, 50, 50, 0.1);
+}
+.ivu-table table {
+  width: 100% !important;
+}
+
+.flex {
+  display: flex !important;
+}
+.flex_justify_content {
+  justify-content: center;
+}
+.flex_align_item {
+  align-items: center;
+}
+.flex-a-c {
+  align-items: center;
+}
+
+.global_text_left {
+  text-align: left;
+}
+.global_text_right {
+  text-align: right;
+}
+.global_float_left {
+  float: left;
+}
+.global_float_right {
+  float: right;
+}
+.clearfix::after {
+  content: '';
+  display: block;
+  clear: both;
+}
+.width_1200 {
+  width: 1200px;
+}
+.width_800 {
+  width: 800px;
+}
+.width_400 {
+  width: 400px;
+}
+
