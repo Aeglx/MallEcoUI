@@ -204,12 +204,164 @@ const handleCurrentChange = (page: number) => {
   getData()
 }
 
-const handleAdd = () => {
-  console.log('添加用户')
+// 对话框
+const dialogVisible = ref(false)
+const dialogTitle = ref('添加用户')
+const formRef = ref()
+const formData = reactive({
+  id: '',
+  username: '',
+  password: '',
+  nickname: '',
+  email: '',
+  roleIds: []
+})
+
+const formRules = {
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  password: [
+    {
+      validator: (rule: any, value: string, callback: any) => {
+        if (!formData.id && !value) {
+          callback(new Error('请输入密码'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
+  ],
+  nickname: [{ required: true, message: '请输入昵称', trigger: 'blur' }],
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
+    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
+  ],
+  roleIds: [{ required: true, message: '请至少选择一个角色', trigger: 'change' }]
 }
 
-const handleEdit = (row: any) => {
-  console.log('编辑用户:', row)
+// 角色列表
+const roleList = ref([])
+
+// 获取角色列表
+const getRoleListData = async () => {
+  try {
+    const res = await getRoleList({ pageSize: 1000 })
+    const data = res.data || res
+    if (data.success) {
+      roleList.value = data.result?.records || data.result?.list || data.result || []
+    }
+  } catch (error) {
+    console.error('获取角色列表失败:', error)
+  }
+}
+
+const handleAdd = () => {
+  dialogTitle.value = '添加用户'
+  formData.id = ''
+  formData.username = ''
+  formData.password = ''
+  formData.nickname = ''
+  formData.email = ''
+  formData.roleIds = []
+  dialogVisible.value = true
+}
+
+const handleEdit = async (row: any) => {
+  try {
+    const res = await getUserDetail(row.id.toString())
+    const data = res.data || res
+    if (data.success && data.result) {
+      dialogTitle.value = '编辑用户'
+      formData.id = data.result.id
+      formData.username = data.result.username || ''
+      formData.password = ''
+      formData.nickname = data.result.nickname || ''
+      formData.email = data.result.email || ''
+      // 获取用户角色
+      try {
+        const rolesRes = await getUserRoles(row.id.toString())
+        const rolesData = rolesRes.data || rolesRes
+        if (rolesData.success && rolesData.result) {
+          formData.roleIds = Array.isArray(rolesData.result)
+            ? rolesData.result.map((r: any) => r.id || r)
+            : []
+        } else if (data.result.roles && Array.isArray(data.result.roles)) {
+          formData.roleIds = data.result.roles.map((r: any) => r.id || r)
+        } else {
+          formData.roleIds = []
+        }
+      } catch (error) {
+        // 如果获取角色失败，使用行数据中的角色
+        if (row.roles && Array.isArray(row.roles)) {
+          formData.roleIds = row.roles.map((r: any) => r.id || r)
+        } else {
+          formData.roleIds = []
+        }
+      }
+      dialogVisible.value = true
+    }
+  } catch (error) {
+    // 如果获取详情失败，使用行数据
+    dialogTitle.value = '编辑用户'
+    formData.id = row.id
+    formData.username = row.username || ''
+    formData.password = ''
+    formData.nickname = row.nickname || ''
+    formData.email = row.email || ''
+    if (row.roles && Array.isArray(row.roles)) {
+      formData.roleIds = row.roles.map((r: any) => r.id || r)
+    } else {
+      formData.roleIds = []
+    }
+    dialogVisible.value = true
+  }
+}
+
+const handleSubmit = async () => {
+  if (!formRef.value) return
+  await formRef.value.validate(async (valid: boolean) => {
+    if (valid) {
+      try {
+        const params: any = {
+          username: formData.username,
+          nickname: formData.nickname,
+          email: formData.email
+        }
+        if (!formData.id && formData.password) {
+          params.password = formData.password
+        }
+
+        let res
+        if (formData.id) {
+          res = await updateUser(formData.id.toString(), params)
+          const updateData = res.data || res
+          if (updateData.success) {
+            // 更新角色
+            if (formData.roleIds && formData.roleIds.length > 0) {
+              await assignUserRoles(formData.id.toString(), formData.roleIds)
+            }
+            ElMessage.success('修改成功')
+            dialogVisible.value = false
+            getData()
+          }
+        } else {
+          res = await addUser(params)
+          const addData = res.data || res
+          if (addData.success) {
+            const userId = addData.result?.id || addData.result
+            if (userId && formData.roleIds && formData.roleIds.length > 0) {
+              await assignUserRoles(userId.toString(), formData.roleIds)
+            }
+            ElMessage.success('添加成功')
+            dialogVisible.value = false
+            getData()
+          }
+        }
+      } catch (error: any) {
+        ElMessage.error(error?.message || '操作失败')
+      }
+    }
+  })
 }
 
 const handleDelete = (row: any) => {
@@ -220,17 +372,19 @@ const handleDelete = (row: any) => {
   }).then(async () => {
     try {
       const res = await deleteUser(row.id.toString())
-      if (res.success) {
+      const data = res.data || res
+      if (data.success) {
         ElMessage.success('删除成功')
         getData()
       }
-    } catch (error) {
-      console.error('删除失败:', error)
+    } catch (error: any) {
+      ElMessage.error(error?.message || '删除失败')
     }
   })
 }
 
 onMounted(() => {
+  getRoleListData()
   getData()
 })
 </script>
