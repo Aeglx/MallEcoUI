@@ -78,6 +78,25 @@
         />
       </div>
     </el-card>
+
+    <!-- 查看详情对话框 -->
+    <el-dialog v-model="viewDialogVisible" title="店铺详情" width="700px">
+      <el-descriptions :column="2" border>
+        <el-descriptions-item label="店铺ID">{{ detailData.id || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="店铺名称">{{ detailData.shopName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="店主">{{ detailData.ownerName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="联系方式">{{ detailData.mobile || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="状态">
+          <el-tag v-if="detailData.status === 'OPEN'" type="success">营业中</el-tag>
+          <el-tag v-else type="danger">已关闭</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="店铺地址" :span="2">{{ detailData.address || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="创建时间">{{ detailData.createTime || '-' }}</el-descriptions-item>
+      </el-descriptions>
+      <template #footer>
+        <el-button @click="viewDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -85,7 +104,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
-import { getShopList, updateShopStatus } from '@/api/shop'
+import { getShopList, getShopDetail, updateShopStatus } from '@/api/shop'
 
 const searchForm = reactive({
   shopName: '',
@@ -148,12 +167,62 @@ const handleCurrentChange = (page: number) => {
   getData()
 }
 
-const handleView = (row: any) => {
-  console.log('查看店铺:', row)
+// 查看详情对话框
+const viewDialogVisible = ref(false)
+const detailData = reactive({
+  id: '',
+  shopName: '',
+  ownerName: '',
+  mobile: '',
+  status: '',
+  address: '',
+  createTime: ''
+})
+
+const handleView = async (row: any) => {
+  try {
+    const res = await getShopDetail(row.id.toString())
+    if (res.success && res.result) {
+      Object.assign(detailData, {
+        id: res.result.id || '',
+        shopName: res.result.shopName || '',
+        ownerName: res.result.ownerName || '',
+        mobile: res.result.mobile || '',
+        status: res.result.status || '',
+        address: res.result.address || '',
+        createTime: res.result.createTime || ''
+      })
+    } else {
+      // 使用行数据
+      Object.assign(detailData, {
+        id: row.id || '',
+        shopName: row.shopName || '',
+        ownerName: row.ownerName || '',
+        mobile: row.mobile || '',
+        status: row.status || '',
+        address: row.address || '',
+        createTime: row.createTime || ''
+      })
+    }
+    viewDialogVisible.value = true
+  } catch (error) {
+    console.error('获取店铺详情失败:', error)
+    // 使用行数据
+    Object.assign(detailData, {
+      id: row.id || '',
+      shopName: row.shopName || '',
+      ownerName: row.ownerName || '',
+      mobile: row.mobile || '',
+      status: row.status || '',
+      address: row.address || '',
+      createTime: row.createTime || ''
+    })
+    viewDialogVisible.value = true
+  }
 }
 
 const handleEdit = (row: any) => {
-  console.log('编辑店铺:', row)
+  ElMessage.info('店铺编辑功能较为复杂，建议使用独立的编辑页面')
 }
 
 const handleToggleStatus = (row: any) => {

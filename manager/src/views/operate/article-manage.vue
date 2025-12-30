@@ -79,6 +79,23 @@
         />
       </div>
     </el-card>
+
+    <!-- 查看详情对话框 -->
+    <el-dialog v-model="viewDialogVisible" title="文章详情" width="800px">
+      <el-descriptions :column="2" border>
+        <el-descriptions-item label="文章标题" :span="2">{{ detailData.title || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="分类">{{ detailData.categoryName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="浏览量">{{ detailData.viewCount || 0 }}</el-descriptions-item>
+        <el-descriptions-item label="创建时间">{{ detailData.createTime || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="更新时间">{{ detailData.updateTime || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="文章内容" :span="2">
+          <div v-html="detailData.content || '-'" style="max-height: 400px; overflow-y: auto"></div>
+        </el-descriptions-item>
+      </el-descriptions>
+      <template #footer>
+        <el-button @click="viewDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -86,7 +103,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus } from '@element-plus/icons-vue'
-import { getArticleList, getArticleCategoryList } from '@/api/operate'
+import { getArticleList, getArticleDetail, getArticleCategoryList } from '@/api/operate'
 
 const searchForm = reactive({
   title: '',
@@ -171,16 +188,63 @@ const handleCurrentChange = (page: number) => {
   getData()
 }
 
+// 查看详情对话框
+const viewDialogVisible = ref(false)
+const detailData = reactive({
+  title: '',
+  categoryName: '',
+  viewCount: 0,
+  createTime: '',
+  updateTime: '',
+  content: ''
+})
+
 const handleAdd = () => {
-  console.log('添加文章')
+  ElMessage.info('文章添加功能较为复杂，建议使用独立的添加页面')
 }
 
-const handleView = (row: any) => {
-  console.log('查看文章:', row)
+const handleView = async (row: any) => {
+  try {
+    const res = await getArticleDetail(row.id.toString())
+    const data = res.data || res
+    if (data.success && data.result) {
+      Object.assign(detailData, {
+        title: data.result.title || '',
+        categoryName: data.result.categoryName || '',
+        viewCount: data.result.viewCount || 0,
+        createTime: data.result.createTime || '',
+        updateTime: data.result.updateTime || '',
+        content: data.result.content || ''
+      })
+    } else {
+      // 使用行数据
+      Object.assign(detailData, {
+        title: row.title || '',
+        categoryName: row.categoryName || '',
+        viewCount: row.viewCount || 0,
+        createTime: row.createTime || '',
+        updateTime: row.updateTime || '',
+        content: row.content || ''
+      })
+    }
+    viewDialogVisible.value = true
+  } catch (error) {
+    console.error('获取文章详情失败:', error)
+    // 使用行数据
+    Object.assign(detailData, {
+      title: row.title || '',
+      categoryName: row.categoryName || '',
+      viewCount: row.viewCount || 0,
+      createTime: row.createTime || '',
+      updateTime: row.updateTime || '',
+      content: row.content || ''
+    })
+    viewDialogVisible.value = true
+  }
 }
 
 const handleEdit = (row: any) => {
-  console.log('编辑文章:', row)
+  ElMessage.info('文章编辑功能较为复杂，建议使用独立的编辑页面')
 }
 
 const handleDelete = (row: any) => {
@@ -189,8 +253,12 @@ const handleDelete = (row: any) => {
     cancelButtonText: '取消',
     type: 'warning'
   }).then(() => {
-    ElMessage.success('删除成功')
-    getData()
+    ElMessage.info('删除功能需要后端提供相应API支持')
+    // TODO: 调用删除API
+    // deleteArticle(row.id).then(() => {
+    //   ElMessage.success('删除成功')
+    //   getData()
+    // })
   })
 }
 

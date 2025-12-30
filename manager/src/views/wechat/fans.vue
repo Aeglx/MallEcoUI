@@ -67,6 +67,34 @@
         />
       </div>
     </el-card>
+
+    <!-- 查看详情对话框 -->
+    <el-dialog v-model="viewDialogVisible" title="粉丝详情" width="700px">
+      <el-descriptions :column="2" border>
+        <el-descriptions-item label="头像" :span="2">
+          <el-avatar :src="detailData.headimgurl" :size="80" />
+        </el-descriptions-item>
+        <el-descriptions-item label="昵称">{{ detailData.nickname || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="OpenID">{{ detailData.openid || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="关注状态">
+          <el-tag v-if="detailData.subscribe" type="success">已关注</el-tag>
+          <el-tag v-else type="info">未关注</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="性别">
+          <span v-if="detailData.sex === 1">男</span>
+          <span v-else-if="detailData.sex === 2">女</span>
+          <span v-else>未知</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="关注时间">{{ detailData.subscribeTime || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="取消关注时间" v-if="detailData.unsubscribeTime">
+          {{ detailData.unsubscribeTime }}
+        </el-descriptions-item>
+        <el-descriptions-item label="备注" :span="2">{{ detailData.remark || '-' }}</el-descriptions-item>
+      </el-descriptions>
+      <template #footer>
+        <el-button @click="viewDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -109,9 +137,10 @@ const getData = async () => {
       pageSize: pagination.pageSize
     }
     const res = await getWechatFansList(params)
-    if (res.success) {
-      tableData.value = res.result?.records || res.result?.list || res.result || []
-      pagination.total = res.result?.total || 0
+    const data = res.data || res
+    if (data.success) {
+      tableData.value = data.result?.records || data.result?.list || data.result || []
+      pagination.total = data.result?.total || 0
     }
   } catch (error) {
     console.error('获取粉丝列表失败:', error)
@@ -134,8 +163,31 @@ const handleCurrentChange = (page: number) => {
   getData()
 }
 
+// 查看详情对话框
+const viewDialogVisible = ref(false)
+const detailData = reactive({
+  nickname: '',
+  openid: '',
+  headimgurl: '',
+  subscribe: false,
+  sex: 0,
+  subscribeTime: '',
+  unsubscribeTime: '',
+  remark: ''
+})
+
 const handleView = (row: any) => {
-  console.log('查看粉丝:', row)
+  Object.assign(detailData, {
+    nickname: row.nickname || '',
+    openid: row.openid || '',
+    headimgurl: row.headimgurl || '',
+    subscribe: row.subscribe || false,
+    sex: row.sex || 0,
+    subscribeTime: row.subscribeTime || '',
+    unsubscribeTime: row.unsubscribeTime || '',
+    remark: row.remark || ''
+  })
+  viewDialogVisible.value = true
 }
 
 onMounted(() => {

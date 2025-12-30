@@ -78,6 +78,30 @@
         />
       </div>
     </el-card>
+
+    <!-- 查看详情对话框 -->
+    <el-dialog v-model="viewDialogVisible" title="反馈详情" width="700px">
+      <el-descriptions :column="2" border>
+        <el-descriptions-item label="反馈ID">{{ detailData.id || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="反馈用户">{{ detailData.memberName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="联系方式">{{ detailData.contact || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="状态">
+          <el-tag v-if="detailData.status === 'HANDLED'" type="success">已处理</el-tag>
+          <el-tag v-else type="warning">待处理</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="反馈内容" :span="2">{{ detailData.content || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="处理意见" :span="2" v-if="detailData.handleRemark">
+          {{ detailData.handleRemark }}
+        </el-descriptions-item>
+        <el-descriptions-item label="反馈时间">{{ detailData.createTime || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="处理时间" v-if="detailData.handleTime">
+          {{ detailData.handleTime }}
+        </el-descriptions-item>
+      </el-descriptions>
+      <template #footer>
+        <el-button @click="viewDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -85,7 +109,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
-import { getFeedbackList, handleFeedback } from '@/api/operate'
+import { getFeedbackList, getFeedbackDetail, handleFeedback } from '@/api/operate'
 
 const searchForm = reactive({
   keyword: '',
@@ -123,9 +147,10 @@ const getData = async () => {
       pageSize: pagination.pageSize
     }
     const res = await getFeedbackList(params)
-    if (res.success) {
-      tableData.value = res.result?.records || res.result?.list || res.result || []
-      pagination.total = res.result?.total || 0
+    const data = res.data || res
+    if (data.success) {
+      tableData.value = data.result?.records || data.result?.list || data.result || []
+      pagination.total = data.result?.total || 0
     }
   } catch (error) {
     console.error('获取反馈列表失败:', error)
@@ -148,8 +173,63 @@ const handleCurrentChange = (page: number) => {
   getData()
 }
 
-const handleView = (row: any) => {
-  console.log('查看:', row)
+// 查看详情对话框
+const viewDialogVisible = ref(false)
+const detailData = reactive({
+  id: '',
+  memberName: '',
+  contact: '',
+  content: '',
+  status: '',
+  handleRemark: '',
+  createTime: '',
+  handleTime: ''
+})
+
+const handleView = async (row: any) => {
+  try {
+    const res = await getFeedbackDetail(row.id.toString())
+    const data = res.data || res
+    if (data.success && data.result) {
+      Object.assign(detailData, {
+        id: data.result.id || '',
+        memberName: data.result.memberName || '',
+        contact: data.result.contact || '',
+        content: data.result.content || '',
+        status: data.result.status || '',
+        handleRemark: data.result.handleRemark || '',
+        createTime: data.result.createTime || '',
+        handleTime: data.result.handleTime || ''
+      })
+    } else {
+      // 使用行数据
+      Object.assign(detailData, {
+        id: row.id || '',
+        memberName: row.memberName || '',
+        contact: row.contact || '',
+        content: row.content || '',
+        status: row.status || '',
+        handleRemark: row.handleRemark || '',
+        createTime: row.createTime || '',
+        handleTime: row.handleTime || ''
+      })
+    }
+    viewDialogVisible.value = true
+  } catch (error) {
+    console.error('获取反馈详情失败:', error)
+    // 使用行数据
+    Object.assign(detailData, {
+      id: row.id || '',
+      memberName: row.memberName || '',
+      contact: row.contact || '',
+      content: row.content || '',
+      status: row.status || '',
+      handleRemark: row.handleRemark || '',
+      createTime: row.createTime || '',
+      handleTime: row.handleTime || ''
+    })
+    viewDialogVisible.value = true
+  }
 }
 
 const handleProcess = (row: any) => {
@@ -159,13 +239,14 @@ const handleProcess = (row: any) => {
     inputType: 'textarea'
   }).then(async ({ value }) => {
     try {
-      const res = await handleFeedback(row.id, { remark: value })
-      if (res.success) {
+      const res = await handleFeedback(row.id.toString(), { remark: value })
+      const data = res.data || res
+      if (data.success) {
         ElMessage.success('处理成功')
         getData()
       }
-    } catch (error) {
-      console.error('处理失败:', error)
+    } catch (error: any) {
+      ElMessage.error(error?.message || '处理失败')
     }
   })
 }

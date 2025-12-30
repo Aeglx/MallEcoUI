@@ -125,6 +125,38 @@
         />
       </div>
     </el-card>
+
+    <!-- 查看详情对话框 -->
+    <el-dialog v-model="viewDialogVisible" title="商品详情" width="900px">
+      <el-descriptions :column="2" border>
+        <el-descriptions-item label="商品ID">{{ detailData.id || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="商品编号">{{ detailData.sn || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="商品名称" :span="2">{{ detailData.goodsName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="商品分类">{{ detailData.categoryName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="品牌">{{ detailData.brandName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="售价">
+          <span style="color: #f56c6c; font-weight: bold">¥{{ detailData.price || '0.00' }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="原价">¥{{ detailData.originalPrice || '0.00' }}</el-descriptions-item>
+        <el-descriptions-item label="库存">{{ detailData.quantity || 0 }}</el-descriptions-item>
+        <el-descriptions-item label="上架状态">
+          <el-tag v-if="detailData.marketEnable === 'UPPER'" type="success">已上架</el-tag>
+          <el-tag v-else type="info">已下架</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="商品图片" :span="2" v-if="detailData.small || detailData.thumbnail">
+          <el-image
+            :src="detailData.small || detailData.thumbnail"
+            fit="cover"
+            style="width: 200px; height: 200px"
+          />
+        </el-descriptions-item>
+        <el-descriptions-item label="商品描述" :span="2">{{ detailData.intro || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="创建时间">{{ detailData.createTime || '-' }}</el-descriptions-item>
+      </el-descriptions>
+      <template #footer>
+        <el-button @click="viewDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -132,7 +164,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus } from '@element-plus/icons-vue'
-import { getGoodsList, deleteGoods, updateGoodsStatus, getCategoryTree } from '@/api/goods'
+import { getGoodsList, getGoodsDetail, deleteGoods, updateGoodsStatus, getCategoryTree } from '@/api/goods'
 
 const defaultImage = '/default-goods.png'
 
@@ -236,20 +268,95 @@ const handleCurrentChange = (page: number) => {
   getData()
 }
 
+// 查看详情对话框
+const viewDialogVisible = ref(false)
+const detailData = reactive({
+  id: '',
+  sn: '',
+  goodsName: '',
+  categoryName: '',
+  brandName: '',
+  price: '0.00',
+  originalPrice: '0.00',
+  quantity: 0,
+  marketEnable: '',
+  small: '',
+  thumbnail: '',
+  intro: '',
+  createTime: ''
+})
+
 // 添加商品
 const handleAdd = () => {
-  // 跳转到添加页面或打开对话框
-  console.log('添加商品')
+  ElMessage.info('商品添加功能较为复杂，建议使用独立的添加页面')
+  // 可以在这里跳转到添加页面或打开对话框
 }
 
 // 查看
-const handleView = (row: any) => {
-  console.log('查看商品:', row)
+const handleView = async (row: any) => {
+  try {
+    const res = await getGoodsDetail(row.id.toString())
+    if (res.success && res.result) {
+      Object.assign(detailData, {
+        id: res.result.id || '',
+        sn: res.result.sn || '',
+        goodsName: res.result.goodsName || '',
+        categoryName: res.result.categoryName || '',
+        brandName: res.result.brandName || '',
+        price: res.result.price || '0.00',
+        originalPrice: res.result.originalPrice || '0.00',
+        quantity: res.result.quantity || 0,
+        marketEnable: res.result.marketEnable || '',
+        small: res.result.small || res.result.thumbnail || '',
+        thumbnail: res.result.thumbnail || '',
+        intro: res.result.intro || '',
+        createTime: res.result.createTime || ''
+      })
+    } else {
+      // 如果获取详情失败，使用行数据
+      Object.assign(detailData, {
+        id: row.id || '',
+        sn: row.sn || '',
+        goodsName: row.goodsName || '',
+        categoryName: row.categoryName || '',
+        brandName: row.brandName || '',
+        price: row.price || '0.00',
+        originalPrice: row.originalPrice || '0.00',
+        quantity: row.quantity || 0,
+        marketEnable: row.marketEnable || '',
+        small: row.small || row.thumbnail || '',
+        thumbnail: row.thumbnail || '',
+        intro: row.intro || '',
+        createTime: row.createTime || ''
+      })
+    }
+    viewDialogVisible.value = true
+  } catch (error) {
+    console.error('获取商品详情失败:', error)
+    // 使用行数据
+    Object.assign(detailData, {
+      id: row.id || '',
+      sn: row.sn || '',
+      goodsName: row.goodsName || '',
+      categoryName: row.categoryName || '',
+      brandName: row.brandName || '',
+      price: row.price || '0.00',
+      originalPrice: row.originalPrice || '0.00',
+      quantity: row.quantity || 0,
+      marketEnable: row.marketEnable || '',
+      small: row.small || row.thumbnail || '',
+      thumbnail: row.thumbnail || '',
+      intro: row.intro || '',
+      createTime: row.createTime || ''
+    })
+    viewDialogVisible.value = true
+  }
 }
 
 // 编辑
 const handleEdit = (row: any) => {
-  console.log('编辑商品:', row)
+  ElMessage.info('商品编辑功能较为复杂，建议使用独立的编辑页面')
+  // 可以在这里跳转到编辑页面
 }
 
 // 切换上架状态
