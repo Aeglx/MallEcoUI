@@ -1,16 +1,5 @@
-// 引入主题色
+// 引入主题色（变量已在variables.scss中定义）
 @import './variables.scss';
-
-// 明亮主题颜色
-$primary_color: #2d8cf0;
-$primary_light_color: #0f1011;
-$primary_dark_color: #2b85e4;
-$success_color: #19be6b;
-$warning_color: #ff9900;
-$error_color: #ed3f14;
-$handle-btn-color: #438cde;
-
-$theme_color: #F31947;
 
 $border_color: #dddee1;
 $title_color: #8c8c8c;

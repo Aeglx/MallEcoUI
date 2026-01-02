@@ -1,12 +1,20 @@
 <template>
   <div class="model-carousel1" :style="{ background: bgColor }">
     <div class="nav-body clearfix">
+      <!-- 侧边导航占位 -->
       <div class="nav-side"></div>
       <div class="nav-content">
+        <!-- 轮播图 -->
         <el-carousel :interval="4000" type="card" height="470px" @change="autoChange">
-          <el-carousel-item v-for="(item, index) in data.options.list" :key="index">
+          <el-carousel-item v-for="(item, index) in data?.options?.list" :key="index">
             <div style="overflow: hidden">
-              <img :src="item.imageUrl || item.img" width="1200" height="470" @click="linkTo(item.linkUrl || item.url)" style="cursor: pointer" />
+              <img
+                :src="item.imageUrl || item.img"
+                width="1200"
+                height="470"
+                @click="linkTo(item.linkUrl || item.url)"
+                style="cursor: pointer"
+              />
             </div>
           </el-carousel-item>
         </el-carousel>
@@ -39,17 +47,19 @@ const autoChange = (val: number) => {
 }
 
 const linkTo = (url: string) => {
-  if (url) {
-    if (url.substr(0, 1) === '/') {
+  if (url && typeof url === 'string') {
+    if (url.startsWith('/')) {
       router.push(url)
-    } else {
+    } else if (url.startsWith('http://') || url.startsWith('https://')) {
       window.open(url, '_blank')
+    } else {
+      router.push(url)
     }
   }
 }
 </script>
 
-<style scoped lang="scss">
+<style lang="scss" scoped>
 .model-carousel1 {
   width: 100%;
   height: 470px;
@@ -81,6 +91,12 @@ const linkTo = (url: string) => {
   position: relative;
 }
 
+.clearfix::after {
+  content: '';
+  display: block;
+  clear: both;
+}
+
 :deep(.el-carousel) {
   width: 100%;
   height: 100%;
@@ -90,4 +106,3 @@ const linkTo = (url: string) => {
   text-align: center;
 }
 </style>
-

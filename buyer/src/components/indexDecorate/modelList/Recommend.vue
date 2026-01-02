@@ -29,19 +29,19 @@
           </el-button>
         </div>
         <div>
-          <div
-            v-for="(item, index) in msgLeft.list"
-            v-if="index !== 0"
-            :key="index"
-            @click="linkTo(item.url)"
-            class="hover-pointer"
-          >
-            <img :src="item.img" width="80" height="80" alt="" />
-            <div>
-              <div>{{ item.name }}</div>
-              <div>{{ item.describe }}</div>
+          <template v-for="(item, index) in msgLeft.list" :key="index">
+            <div
+              v-if="index !== 0"
+              @click="linkTo(item.url)"
+              class="hover-pointer"
+            >
+              <img :src="item.img" width="80" height="80" alt="" />
+              <div>
+                <div>{{ item.name }}</div>
+                <div>{{ item.describe }}</div>
+              </div>
             </div>
-          </div>
+          </template>
         </div>
       </div>
     </div>
@@ -89,11 +89,13 @@ const msgLeft = computed(() => props.data?.options?.contentLeft || { list: [] })
 const msgRight = computed(() => props.data?.options?.contentRight || { list: [] })
 
 const linkTo = (url: string) => {
-  if (url) {
-    if (url.substr(0, 1) === '/') {
+  if (url && typeof url === 'string') {
+    if (url.startsWith('/')) {
       router.push(url)
-    } else {
+    } else if (url.startsWith('http://') || url.startsWith('https://')) {
       window.open(url, '_blank')
+    } else {
+      router.push(url)
     }
   }
 }

@@ -5,16 +5,16 @@
     </div>
     <div class="right-side">
       <div class="badge-box flex">
-        <div class="badge" @click="linkTo(data.options.left.data?.image?.url)">
+        <div class="badge" @click="linkTo(data.options.left.data?.image?.url || data.options.left.data?.image?.linkUrl)">
           {{ data.options.left.data?.badge?.label }}
         </div>
       </div>
       <div class="flex goods-list">
         <div
+          v-for="(item, index) in data.options.left.data?.list"
+          :key="index"
           class="goods-item flex hover-pointer"
           @click="linkTo(item.url)"
-          :key="index"
-          v-for="(item, index) in data.options.left.data?.list"
         >
           <div class="goods-thumbnail">
             <img :src="item.img" alt="" />
@@ -39,11 +39,13 @@ const props = defineProps<{
 const router = useRouter()
 
 const linkTo = (url: string) => {
-  if (url) {
-    if (url.substr(0, 1) === '/') {
+  if (url && typeof url === 'string') {
+    if (url.startsWith('/')) {
       router.push(url)
-    } else {
+    } else if (url.startsWith('http://') || url.startsWith('https://')) {
       window.open(url, '_blank')
+    } else {
+      router.push(url)
     }
   }
 }

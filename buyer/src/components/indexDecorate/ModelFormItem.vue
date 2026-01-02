@@ -32,15 +32,15 @@
         alt=""
       />
       <ul class="advert-list width_1200_auto">
-        <li
-          v-for="(item, index) in element.options.list"
-          v-if="index !== 0"
-          :key="index"
-          @click="linkTo(item.url)"
-          class="hover-pointer"
-        >
-          <img :src="item.img" width="230" height="190" alt="" />
-        </li>
+        <template v-for="(item, index) in element.options.list" :key="index">
+          <li
+            v-if="index !== 0"
+            @click="linkTo(item.url)"
+            class="hover-pointer"
+          >
+            <img :src="item.img" width="230" height="190" alt="" />
+          </li>
+        </template>
       </ul>
     </div>
 
@@ -175,12 +175,17 @@ const props = defineProps<{
 const router = useRouter()
 
 const linkTo = (url: string) => {
-  if (url.substr(0, 1) === '/') {
-    // 内部路由
-    router.push(url)
-  } else {
-    // 外部链接
-    window.open(url, '_blank')
+  if (url && typeof url === 'string') {
+    if (url.startsWith('/')) {
+      // 内部路由
+      router.push(url)
+    } else if (url.startsWith('http://') || url.startsWith('https://')) {
+      // 外部链接
+      window.open(url, '_blank')
+    } else {
+      // 其他情况，尝试作为路由处理
+      router.push(url)
+    }
   }
 }
 </script>

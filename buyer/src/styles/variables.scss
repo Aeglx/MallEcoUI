@@ -1,5 +1,5 @@
 // 主题颜色变量
-$theme_color: #5cadff;
+$theme_color: #F31947; // 主主题色
 $light_background_color: #f5f7fa;
 $primary_color: #409eff;
 $success_color: #67c23a;
@@ -10,4 +10,17 @@ $info_color: #909399;
 // 布局变量
 $container_width: 1200px;
 $header_height: 60px;
+
+// 明亮主题颜色（兼容旧代码）
+$primary_light_color: #0f1011;
+$primary_dark_color: #2b85e4;
+$handle-btn-color: #438cde;
+
+// 边框和文本颜色
+$border_color: #dddee1;
+$title_color: #8c8c8c;
+$light_title_color: #1c2438;
+$light_content_color: #495060;
+$light_sub_color: #80848f;
+$light_white_background_color: #fff;
 

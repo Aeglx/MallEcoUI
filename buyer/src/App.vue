@@ -52,7 +52,8 @@ const getSite = async () => {
       updateSiteInfo(siteData.siteName, siteData.buyerSideLogo, siteData.buyerSideIcon)
     }
   } catch (error) {
-    console.error('获取站点信息失败:', error)
+    // 后端未启动时不阻塞页面加载，使用默认值
+    console.warn('获取站点信息失败（后端可能未启动）:', error)
   }
 }
 

@@ -67,11 +67,13 @@ const changeCurr = (index: number) => {
 }
 
 const linkTo = (url: string) => {
-  if (url) {
-    if (url.substr(0, 1) === '/') {
+  if (url && typeof url === 'string') {
+    if (url.startsWith('/')) {
       router.push(url)
-    } else {
+    } else if (url.startsWith('http://') || url.startsWith('https://')) {
       window.open(url, '_blank')
+    } else {
+      router.push(url)
     }
   }
 }

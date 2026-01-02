@@ -24,5 +24,25 @@ declare const BASE: {
   PREFIX: string
 }
 
-declare module 'js-cookie'
+declare module 'js-cookie' {
+  export interface CookieAttributes {
+    expires?: number | Date
+    path?: string
+    domain?: string
+    secure?: boolean
+    sameSite?: 'strict' | 'lax' | 'none'
+  }
+
+  export interface CookiesStatic {
+    get(name: string): string | undefined
+    getJSON(name: string): any
+    set(name: string, value: string | object, options?: CookieAttributes): string | undefined
+    remove(name: string, options?: CookieAttributes): void
+    withAttributes(attributes: CookieAttributes): CookiesStatic
+    withConverter(converter: any): CookiesStatic
+  }
+
+  const Cookies: CookiesStatic
+  export default Cookies
+}
 

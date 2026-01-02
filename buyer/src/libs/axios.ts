@@ -114,31 +114,75 @@ service.interceptors.response.use(
         ElMessage.error(error.response.data?.message || '请求失败')
       }
     } else {
-      ElMessage.error('网络错误，请检查网络连接')
+      // 网络错误或连接被拒绝（后端未启动）时，静默处理
+      // 不显示错误消息，让页面可以正常加载
+      if (error.code !== 'ERR_NETWORK' && error.code !== 'ECONNREFUSED') {
+        ElMessage.error('网络错误，请检查网络连接')
+      }
     }
     return Promise.reject(error)
   }
 )
 
 // 请求方法
-export const getRequest = (url: string, params?: any, config?: AxiosRequestConfig) => {
-  return service.get(url, { params, ...config })
+export const getRequest = (url: string, params?: any, config?: any) => {
+  const finalConfig: any = { params, ...config }
+  if (config?.needToken !== undefined) {
+    finalConfig.needToken = config.needToken
+  }
+  // 如果指定了baseURL，临时修改axios实例的baseURL
+  if (config?.baseURL) {
+    const originalBaseURL = service.defaults.baseURL
+    service.defaults.baseURL = config.baseURL
+    const promise = service.get(url, finalConfig).finally(() => {
+      // 恢复原始baseURL
+      service.defaults.baseURL = originalBaseURL
+    })
+    return promise
+  }
+  return service.get(url, finalConfig)
 }
 
-export const postRequest = (url: string, params?: any, config?: AxiosRequestConfig) => {
-  return service.post(url, params, config)
+export const postRequest = (url: string, params?: any, config?: any) => {
+  const finalConfig: any = { ...config }
+  if (config?.needToken !== undefined) {
+    finalConfig.needToken = config.needToken
+  }
+  // 如果指定了baseURL，临时修改axios实例的baseURL
+  if (config?.baseURL) {
+    const originalBaseURL = service.defaults.baseURL
+    service.defaults.baseURL = config.baseURL
+    const promise = service.post(url, params, finalConfig).finally(() => {
+      // 恢复原始baseURL
+      service.defaults.baseURL = originalBaseURL
+    })
+    return promise
+  }
+  return service.post(url, params, finalConfig)
 }
 
-export const putRequest = (url: string, params?: any, config?: AxiosRequestConfig) => {
-  return service.put(url, params, config)
+export const putRequest = (url: string, params?: any, config?: any) => {
+  const finalConfig = { ...config }
+  if (config?.needToken !== undefined) {
+    ;(finalConfig as any).needToken = config.needToken
+  }
+  return service.put(url, params, finalConfig)
 }
 
-export const patchRequest = (url: string, params?: any, config?: AxiosRequestConfig) => {
-  return service.patch(url, params, config)
+export const patchRequest = (url: string, params?: any, config?: any) => {
+  const finalConfig = { ...config }
+  if (config?.needToken !== undefined) {
+    ;(finalConfig as any).needToken = config.needToken
+  }
+  return service.patch(url, params, finalConfig)
 }
 
-export const deleteRequest = (url: string, params?: any, config?: AxiosRequestConfig) => {
-  return service.delete(url, { params, ...config })
+export const deleteRequest = (url: string, params?: any, config?: any) => {
+  const finalConfig = { params, ...config }
+  if (config?.needToken !== undefined) {
+    ;(finalConfig as any).needToken = config.needToken
+  }
+  return service.delete(url, finalConfig)
 }
 
 // Token刷新函数（防抖）
