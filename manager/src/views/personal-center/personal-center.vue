@@ -1,34 +1,34 @@
 <template>
   <div class="own-space">
-    <Card class="own-space-new">
+    <el-card class="own-space-new">
       <div class="own-wrap">
         <div style="width: 240px">
-          <Menu :active-name="activeName" theme="light" @on-select="changeMenu">
-            <MenuItem name="基本信息">基本信息</MenuItem>
-            <MenuItem name="安全设置">安全设置</MenuItem>
-          </Menu>
+          <el-menu :default-active="activeName" @select="changeMenu">
+            <el-menu-item index="基本信息">基本信息</el-menu-item>
+            <el-menu-item index="安全设置">安全设置</el-menu-item>
+          </el-menu>
         </div>
         <div style="padding: 8px 40px; width: 100%">
           <div class="title">{{ currMenu }}</div>
           <div>
             <div v-show="currMenu === '基本信息'">
-              <Form ref="userFormRef" :model="userForm" :label-width="90" label-position="left">
-                <FormItem label="用户头像：">
+              <el-form ref="userFormRef" :model="userForm" label-width="90px" label-position="left">
+                <el-form-item label="用户头像：">
                   <div>头像上传功能待实现</div>
-                </FormItem>
-                <FormItem label="用户名：">
+                </el-form-item>
+                <el-form-item label="用户名：">
                   {{ userForm.username }}
-                </FormItem>
-                <FormItem label="昵称：" prop="nickName">
-                  <Input maxlength="20" v-model="userForm.nickName" style="width: 250px" />
-                </FormItem>
-                <FormItem>
-                  <Button type="primary" :loading="saveLoading" @click="saveUserInfo">
+                </el-form-item>
+                <el-form-item label="昵称：" prop="nickName">
+                  <el-input maxlength="20" v-model="userForm.nickName" style="width: 250px" />
+                </el-form-item>
+                <el-form-item>
+                  <el-button type="primary" :loading="saveLoading" @click="saveUserInfo">
                     保存
-                  </Button>
-                  <Button @click="cancelEdit" style="margin-left: 8px">取消</Button>
-                </FormItem>
-              </Form>
+                  </el-button>
+                  <el-button @click="cancelEdit" style="margin-left: 8px">取消</el-button>
+                </el-form-item>
+              </el-form>
             </div>
             <div v-show="currMenu === '安全设置'">
               <p>安全设置功能待实现</p>
@@ -36,13 +36,13 @@
           </div>
         </div>
       </div>
-    </Card>
+    </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Message } from 'view-design'
+import { ElMessage } from 'element-plus'
 import Cookies from 'js-cookie'
 import { userInfo, userInfoEdit } from '@/api/index'
 
@@ -62,7 +62,8 @@ const changeMenu = (name: string) => {
 }
 
 const saveUserInfo = async () => {
-  userFormRef.value?.validate(async (valid: boolean) => {
+  if (!userFormRef.value) return
+  await userFormRef.value.validate(async (valid: boolean) => {
     if (valid) {
       saveLoading.value = true
       try {

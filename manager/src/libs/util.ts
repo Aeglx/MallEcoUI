@@ -114,14 +114,12 @@ const util = {
       if (!appStore.added) {
         // 第一次加载 读取数据
         getCurrentPermissionList().then((res: any) => {
-          console.log('📋 获取权限列表响应:', res)
           if (!res.success) {
             console.error('❌ 获取权限列表失败:', res)
             reject(new Error('获取权限列表失败: ' + (res.message || '未知错误')))
             return
           }
           let menuData = res.result
-          console.log('📋 菜单数据:', menuData)
 
           // 格式化数据，设置 空children 为 null
           // 确保菜单数据格式正确
@@ -164,9 +162,15 @@ const util = {
           util.initRouterNode(otherRoutes, otherRouter, false) // otherRouter 是顶级路由
 
           // 添加所有主界面路由
+          // 注意：constRoutes 中的路由有 children，需要将 children 逐个添加到 otherRouter
           const filteredRoutes = constRoutes.filter((item) => item.children && item.children.length > 0)
           filteredRoutes.forEach((route) => {
-            router.addRoute('otherRouter', route)
+            // 将 route 的 children 逐个添加到 otherRouter，而不是添加整个 route 对象
+            if (route.children && Array.isArray(route.children)) {
+              route.children.forEach((childRoute: any) => {
+                router.addRoute('otherRouter', childRoute)
+              })
+            }
           })
           appStore.updateAppRouter(filteredRoutes)
 
@@ -261,78 +265,34 @@ const util = {
       }
     }
 
-    // 添加调试信息
-    console.log(`📋 当前导航: ${currNav}`)
-    console.log(`📋 菜单数据层级信息 (完整):`, filteredMenuData?.map((item: any) => ({
-      name: item.name,
-      title: item.title,
-      path: item.path,
-      frontRoute: item.frontRoute,
-      type: item.type,
-      level: item.level,
-      childrenCount: item.children?.length || 0,
-      hasGrandChildren: item.children?.some((c: any) => c.children?.length > 0) || false,
-      // 递归显示子菜单结构（用于调试）
-      childrenTypes: item.children?.map((c: any) => ({
-        name: c.name,
-        type: c.type,
-        level: c.level,
-        hasChildren: !!(c.children && c.children.length > 0)
-      })) || []
-    })))
-    
-    // 统计菜单数量（递归统计所有页面）
-    const countPages = (items: any[]): number => {
-      let count = 0
-      items.forEach((item: any) => {
-        if (item.type === 1) {
-          count++
-        } else if (item.children && item.children.length > 0) {
-          count += countPages(item.children)
-        }
-      })
-      return count
-    }
-    const totalPages = countPages(filteredMenuData || [])
-    console.log(`📋 菜单统计: 总共应该有 ${totalPages} 个页面（type === 1）`)
-    
     // 递归处理所有子路由（包括二级和三级菜单）
     // 只有 type === 1（页面）的路由才会被添加到 router 中
     util.initRouterNode(menuRoutes, filteredMenuData, true) // 作为 otherRouter 的子路由
     
-    console.log(`📋 处理后的路由数量: ${menuRoutes.length}`)
     if (menuRoutes.length === 0) {
       console.warn(`⚠️ 警告：没有生成任何路由，请检查菜单数据结构`)
-      console.log(`📋 菜单数据结构:`, JSON.stringify(filteredMenuData?.slice(0, 2), null, 2))
+      return
     }
 
     // 添加路由到 router
-    console.log(`📋 准备添加 ${menuRoutes.length} 个路由到 otherRouter`)
     let successCount = 0
     let failCount = 0
+    const failedRoutes: any[] = []
     
     menuRoutes.forEach((route) => {
-      // 调试输出
-      const routeInfo = {
-        name: route.name,
-        path: route.path,
-        frontRoute: route.meta?.frontRoute || route.frontRoute,
-        hasComponent: !!route.component,
-        hasMeta: !!route.meta
-      }
-      console.log(`📌 添加路由:`, routeInfo)
-      
       // 确保路由配置正确
       if (!route.path) {
-        console.error(`❌ 路由缺少 path:`, routeInfo, route)
+        console.error(`❌ 路由缺少 path:`, { name: route.name, frontRoute: route.meta?.frontRoute })
         failCount++
+        failedRoutes.push({ name: route.name, path: route.path, reason: '缺少path' })
         return
       }
       
       // 确保有组件
       if (!route.component) {
-        console.error(`❌ 路由缺少 component:`, routeInfo, route)
+        console.error(`❌ 路由缺少 component:`, { name: route.name, path: route.path })
         failCount++
+        failedRoutes.push({ name: route.name, path: route.path, reason: '缺少component' })
         return
       }
       
@@ -348,103 +308,139 @@ const util = {
       
       // 验证路径格式（子路由应该是相对路径，不以 / 开头）
       if (route.path.startsWith('/') && route.path !== '/') {
-        console.warn(`⚠️ 子路由路径不应该以 / 开头: ${route.path}，已自动修复`)
         route.path = route.path.substring(1)
       }
       
       try {
-        router.addRoute('otherRouter', route)
-        successCount++
-        console.log(`✅ 路由添加成功: ${route.path} -> /${route.path}`)
+        // 检查路由对象结构（只检查第一个路由，避免日志过多）
+        if (menuRoutes.indexOf(route) === 0) {
+          console.log('🔍 第一个路由对象结构:', {
+            name: route.name,
+            path: route.path,
+            hasComponent: !!route.component,
+            componentType: typeof route.component,
+            hasMeta: !!route.meta,
+            metaKeys: route.meta ? Object.keys(route.meta) : [],
+            allKeys: Object.keys(route),
+            routeObject: route
+          })
+        }
+        
+        // 确保路由对象符合 Vue Router 的要求
+        const routeToAdd: any = {
+          name: route.name,
+          path: route.path,
+          component: route.component,
+          meta: route.meta || {}
+        }
+        
+        // 添加路由前检查 otherRouter 的状态
+        const beforeRoutes = router.getRoutes()
+        const beforeOtherRouter = beforeRoutes.find((r: any) => r.name === 'otherRouter')
+        const beforeChildrenCount = beforeOtherRouter?.children?.length || 0
+        
+        // 使用清理后的路由对象添加路由
+        router.addRoute('otherRouter', routeToAdd)
+        
+        // 添加路由后立即检查 otherRouter 的状态
+        const afterRoutes = router.getRoutes()
+        const afterOtherRouter = afterRoutes.find((r: any) => r.name === 'otherRouter')
+        const afterChildrenCount = afterOtherRouter?.children?.length || 0
+        
+        // 检查路由是否真的被添加了
+        const addedRoute = afterOtherRouter?.children?.find((r: any) => r.name === route.name)
+        if (!addedRoute && afterChildrenCount === beforeChildrenCount) {
+          // 路由没有被添加，但也没有报错
+          console.warn(`⚠️ 路由添加后未找到: ${route.name}, path: ${route.path}, before: ${beforeChildrenCount}, after: ${afterChildrenCount}`)
+          failCount++
+          failedRoutes.push({ name: route.name, path: route.path, reason: '添加后未找到' })
+        } else {
+          successCount++
+        }
       } catch (error: any) {
         failCount++
-        console.error(`❌ 路由添加失败: ${route.path}`, error?.message || error, route)
+        failedRoutes.push({ name: route.name, path: route.path, reason: error?.message || '未知错误' })
+        console.error(`❌ 路由添加失败:`, { name: route.name, path: route.path, error: error?.message || error })
       }
     })
     
-    console.log(`📊 路由添加统计: 成功 ${successCount} 个，失败 ${failCount} 个`)
+    // 输出统计信息
+    if (failCount > 0 || successCount > 0) {
+      console.log(`📊 路由添加统计: 成功 ${successCount} 个，失败 ${failCount} 个，总计 ${menuRoutes.length} 个`)
+      if (failCount > 0) {
+        console.error(`❌ 失败的路由:`, failedRoutes)
+      }
+      // 立即验证添加结果（同步检查）
+      const immediateRoutes = router.getRoutes()
+      const immediateOtherRouter = immediateRoutes.find((r: any) => r.name === 'otherRouter')
+      const immediateChildrenCount = immediateOtherRouter?.children?.length || 0
+      console.log(`📊 立即验证（同步）: otherRouter.children 数量 = ${immediateChildrenCount}`)
+      if (successCount > 0 && immediateChildrenCount < successCount + 3) {
+        console.error(`❌ 路由添加后数量不匹配: 期望至少 ${successCount + 3} 个，实际 ${immediateChildrenCount} 个`)
+        if (menuRoutes.length > 0) {
+          console.error(`❌ 第一个路由对象结构:`, {
+            name: menuRoutes[0].name,
+            path: menuRoutes[0].path,
+            hasComponent: !!menuRoutes[0].component,
+            hasMeta: !!menuRoutes[0].meta,
+            keys: Object.keys(menuRoutes[0])
+          })
+        }
+      }
+    }
     
-    // 验证路由是否正确添加（用于调试）
-    // 注意：Vue Router 在添加路由后可能需要一些时间来更新，所以使用延迟验证
+    // 验证路由是否正确添加（只显示失败和缺失的路由）
     setTimeout(() => {
       const allRoutes = router.getRoutes()
       const otherRouterRoute = allRoutes.find(r => r.name === 'otherRouter')
       
-      console.log(`📋 验证路由（延迟验证）：`)
-      console.log(`  - otherRouter 存在: ${!!otherRouterRoute}`)
-      const childrenCount = otherRouterRoute?.children?.length || 0
-      console.log(`  - otherRouter children 数量: ${childrenCount}`)
-      
-      if (otherRouterRoute?.children && childrenCount > 0) {
-        const allChildren = otherRouterRoute.children.map((r: any) => {
-          const actualPath = r.path || ''
-          return {
-            name: r.name,
-            path: actualPath,
-            fullPath: actualPath.startsWith('/') ? actualPath : `/${actualPath}`,
-            frontRoute: r.meta?.frontRoute,
-            hasComponent: !!r.component || !!r.components
-          }
-        })
-        
-        const displayCount = Math.min(20, allChildren.length)
-        console.log(`  - 所有 children (前${displayCount}个，共${allChildren.length}个):`, allChildren.slice(0, displayCount))
-        
-        // 使用 name 来匹配 admin 路由（更可靠）
-        const adminRoutes = allChildren.filter((r: any) => {
-          return r.name && r.name.startsWith('admin-')
-        })
-        console.log(`  - admin 路由数量: ${adminRoutes.length}`)
-        if (adminRoutes.length > 0 && adminRoutes.length <= 10) {
-          console.log(`  - admin 路由列表:`, adminRoutes)
-        } else if (adminRoutes.length > 10) {
-          console.log(`  - admin 路由列表 (前10个):`, adminRoutes.slice(0, 10))
-        }
-        
-        // 对比期望的路由数量（使用 name 匹配，因为 name 更可靠）
-        const matchedRoutes = menuRoutes.filter(menuRoute => {
-          return allChildren.some((child: any) => child.name === menuRoute.name)
-        })
-        console.log(`  - 成功匹配的路由数量: ${matchedRoutes.length}/${menuRoutes.length}`)
-        
-        if (matchedRoutes.length === menuRoutes.length) {
-          console.log(`✅ 所有路由都已成功添加`)
-        } else if (menuRoutes.length > 0 && matchedRoutes.length < menuRoutes.length) {
-          const missingRoutes = menuRoutes.filter(menuRoute => {
-            return !allChildren.some((child: any) => child.name === menuRoute.name)
-          })
-          if (missingRoutes.length > 0 && missingRoutes.length <= 10) {
-            console.warn(`⚠️ 警告：期望添加 ${menuRoutes.length} 个路由，但实际匹配到 ${matchedRoutes.length} 个`)
-            console.log(`  - 缺失的路由:`, missingRoutes.map((r: any) => ({ name: r.name, path: r.path })))
-          } else if (missingRoutes.length > 10) {
-            console.warn(`⚠️ 警告：期望添加 ${menuRoutes.length} 个路由，但实际匹配到 ${matchedRoutes.length} 个`)
-            console.log(`  - 缺失的路由 (前10个):`, missingRoutes.slice(0, 10).map((r: any) => ({ name: r.name, path: r.path })))
-          }
-        }
-      } else {
-        console.warn(`  ⚠️ otherRouter 没有 children 或 children 数量为0`)
+      if (!otherRouterRoute) {
+        console.error(`❌ otherRouter 路由不存在`)
+        return
       }
-    }, 100) // 延迟100ms验证，确保路由已添加
-
-    // 刷新界面菜单
-    // 注意：菜单渲染需要完整的菜单数据（包含目录结构），而不是只有页面的路由数据
-    // menuRoutes 只包含 type === 1 的页面路由，不包含 type === 0 的目录
-    // 所以应该使用 filteredMenuData（完整的菜单结构），但需要确保格式正确
-    if (filteredMenuData && filteredMenuData.length > 0) {
-      // 确保菜单数据格式正确，保留 children 结构
-      const menuListData = filteredMenuData.map((item: any) => ({
-        id: item.id,
-        name: item.name,
-        title: item.title,
-        children: item.children || [],
-        frontRoute: item.frontRoute,
-        firstRouterName: item.firstRouterName
+      
+      const childrenCount = otherRouterRoute.children?.length || 0
+      if (childrenCount === 0) {
+        console.error(`❌ otherRouter 没有 children，但期望添加 ${menuRoutes.length} 个路由`)
+        console.error(`❌ 尝试添加的路由名称 (前5个):`, menuRoutes.slice(0, 5).map((r: any) => ({ name: r.name, path: r.path })))
+        return
+      }
+      
+      const allChildren = otherRouterRoute.children.map((r: any) => ({
+        name: r.name,
+        path: r.path || '',
       }))
-      appStore.updateMenulist(menuListData)
-      console.log(`📋 菜单数据已更新: ${menuListData.length} 个菜单项`)
-    } else {
-      console.warn(`⚠️ 警告：菜单数据为空，无法更新菜单`)
-    }
+      
+      // 对比期望的路由数量（使用 name 匹配）
+      const matchedRoutes = menuRoutes.filter(menuRoute => {
+        return allChildren.some((child: any) => child.name === menuRoute.name)
+      })
+      
+      if (matchedRoutes.length < menuRoutes.length) {
+        const missingRoutes = menuRoutes.filter(menuRoute => {
+          return !allChildren.some((child: any) => child.name === menuRoute.name)
+        })
+        console.error(`❌ 路由匹配失败: 期望 ${menuRoutes.length} 个，实际匹配 ${matchedRoutes.length} 个，otherRouter.children 总数 ${childrenCount}`)
+        console.error(`❌ 缺失的路由 (前5个):`, missingRoutes.slice(0, 5).map((r: any) => ({ name: r.name, path: r.path })))
+        if (missingRoutes.length > 5) {
+          console.error(`❌ ... 还有 ${missingRoutes.length - 5} 个缺失的路由`)
+        }
+        console.error(`❌ 实际存在的路由名称:`, allChildren.map((r: any) => r.name))
+      }
+    }, 300)
+
+      // 刷新界面菜单
+      if (filteredMenuData && filteredMenuData.length > 0) {
+        const menuListData = filteredMenuData.map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          title: item.title,
+          children: item.children || [],
+          frontRoute: item.frontRoute,
+          firstRouterName: item.firstRouterName
+        }))
+        appStore.updateMenulist(menuListData)
+      }
 
     // 更新标签列表
     const tagsList: any[] = []

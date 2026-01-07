@@ -11,6 +11,7 @@ declare module 'vue' {
     Category: typeof import('./src/components/malleco-dialog/template/category.vue')['default']
     CircleLoading: typeof import('./src/components/malleco/circle-loading.vue')['default']
     ConfigDrawer: typeof import('./src/components/malleco/config-drawer.vue')['default']
+    ElAlert: typeof import('element-plus/es')['ElAlert']
     ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElBadge: typeof import('element-plus/es')['ElBadge']
     ElButton: typeof import('element-plus/es')['ElButton']

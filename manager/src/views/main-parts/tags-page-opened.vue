@@ -279,7 +279,7 @@ onUnmounted(() => {
 </script>
 
 <style lang="scss" scoped>
-@import '@/views/main.scss';
+@use '@/views/main.scss' as *;
 
 .contextmenu {
   position: absolute;

@@ -718,5 +718,5 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-@import './home.scss';
+@use './home.scss';
 </style>

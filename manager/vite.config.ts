@@ -66,9 +66,8 @@ export default defineConfig({
   css: {
     preprocessorOptions: {
       scss: {
-        // 只注入变量文件，避免重复导入样式
-        // 这样所有 SCSS 文件都可以使用变量，但不会重复导入样式
-        additionalData: `@import "@/styles/variables.scss";`
+        api: 'modern-compiler',
+        additionalData: `@use "@/styles/variables.scss" as *;`
       },
       less: {
         javascriptEnabled: true
